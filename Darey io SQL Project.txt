@@ -1,0 +1,111 @@
+
+
+
+Victoria Abioye-Obe
+  9:09 PM
+-- Capstone Project Core 2- SQL Fundamentals with AdventureWorks 2016 Database.
+--STEP 1: SETTING UP THE ENVIRONMENT.
+--  i. Installing SQL Server
+-- ii. Downloading and Restore the AdventureWorks2016 sample database
+-- STEP 2:  DATA EXPLORATION
+-- i. Connect to the AdventureWorks database
+USE AdventureWorks2016;
+-- ii. Explore the database schema
+EXEC sp_help;
+-- STEP 3: CUSTOMER ANALYSIS
+-- i. Analyse customer behaviour
+ -- Hint:  SELECT client_id, COUNT(purchase_id) AS purchase_count FROM purchases GROUP BY client_id;
+ SELECT CustomerID AS client_id,
+       COUNT(SalesOrderID) AS purchase_count
+FROM Sales.SalesOrderHeader
+GROUP BY CustomerID
+ORDER BY purchase_count DESC;
+--OR--
+SELECT
+    c.CustomerID AS client_id,
+    p.Name AS product_name,
+    COUNT(sod.ProductID) AS product_purchase_count
+FROM
+    Sales.Customer c
+JOIN
+    Sales.SalesOrderHeader soh ON c.CustomerID = soh.CustomerID
+JOIN
+    Sales.SalesOrderDetail sod ON soh.SalesOrderID = sod.SalesOrderID
+JOIN
+    Production.Product p ON sod.ProductID = p.ProductID
+GROUP BY
+    c.CustomerID, p.Name;
+-- ii. Summarize sales data
+ -- Hint: SELECT client_id, AVG(amount_spent) AS avg_purchase_value FROM purchases GROUP BY client_id;
+ SELECT CustomerID AS client_id,
+       AVG(TotalDue) AS avg_purchase_value
+FROM Sales.SalesOrderHeader
+GROUP BY CustomerID
+ORDER BY avg_purchase_value DESC;
+-- Step 4: INVENTORY MANAGEMENT
+--i. Analyse inventory turnover
+--Hint: SELECT item_id, COUNT(order_id) AS order_count FROM orders GROUP BY item_id ORDER BY order_count DESC;
+SELECT ProductID AS item_id,
+       COUNT(SalesOrderID) AS order_count
+FROM Sales.SalesOrderDetail
+GROUP BY ProductID
+ORDER BY order_count DESC;
+--ii. Calculate  metrics
+--Hint: SELECT item_id, COUNT(order_id)/COUNT(DISTINCT stock_id) AS turnover_rate FROM orders GROUP BY item_id;
+SELECT
+    p.ProductID AS item_id,
+    COUNT(sod.SalesOrderID) * 1.0 / COUNT(DISTINCT pi.LocationID) AS turnover_rate
+FROM
+    Production.Product AS p
+JOIN
+    Sales.SalesOrderDetail AS sod ON p.ProductID = sod.ProductID
+JOIN
+    Sales.SalesOrderHeader AS soh ON soh.SalesOrderID = sod.SalesOrderID
+JOIN
+    Production.ProductInventory AS pi ON p.ProductID = pi.ProductID
+GROUP BY
+    p.ProductID;
+--STEP 5 REVENUE ANALYSIS
+--i. Calculate total revenue, average revenue per order
+ --Hint: SELECT client_id, SUM(total_amount) AS total_revenue FROM orders GROUP BY client_id;
+ SELECT
+    soh.CustomerID AS client_id,
+    SUM(soh.TotalDue) AS total_revenue,
+    AVG(soh.TotalDue) AS avg_revenue_per_order
+FROM
+    Sales.SalesOrderHeader AS soh
+GROUP BY
+    soh.CustomerID;
+	--OR--
+	SELECT CustomerID AS client_id,
+       SUM(TotalDue) AS total_revenue,
+       AVG(TotalDue) AS avg_revenue_per_order
+FROM Sales.SalesOrderHeader
+GROUP BY CustomerID
+ORDER BY total_revenue DESC;
+--ii. Identify top- performing entities
+-- Hint:  SELECT item_id, SUM(total_amount) AS total_revenue FROM order_items JOIN orders ON order_items.orders ON order_items.order_id =orders.order_id GROUP BY item_id ORDER BY total_revenue DESC;
+SELECT ProductID AS item_id,
+       SUM(LineTotal) AS total_revenue
+FROM Sales.SalesOrderDetail
+JOIN Sales.SalesOrderHeader
+    ON Sales.SalesOrderDetail.SalesOrderID = Sales.SalesOrderHeader.SalesOrderID
+GROUP BY ProductID
+ORDER BY total_revenue DESC;
+--STEP 6 CUSTOMER SEGMENTATION
+--i. Segment customers
+--Hint:  SELECT client_id, COUNT(order_id) AS order_count FROM orders GROUP BY client_id HAVING order_count > 5
+SELECT CustomerID AS client_id,
+       COUNT(SalesOrderID) AS order_count
+FROM Sales.SalesOrderHeader
+GROUP BY CustomerID
+HAVING COUNT(SalesOrderID) > 5
+ORDER BY order_count DESC;
+--ii. Tailor marketing strategies
+--Hint:  SELECT client_id, COUNT(order_id) AS order_count, SUM(total_amount) AS total_spent FROM orders GROUP BY client_id;
+SELECT CustomerID AS client_id,
+       COUNT(SalesOrderID) AS order_count,
+       SUM(TotalDue) AS total_spent
+FROM Sales.SalesOrderHeader
+GROUP BY CustomerID
+ORDER BY total_spent DESC;
